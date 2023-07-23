@@ -1,0 +1,32 @@
+volumes:
+  # Persistent Volumes to store Redis data across containers termination/recreation
+  redis_data: {}
+
+services:
+  redis:
+    image: "redis:latest"
+    container_name: lock_redis
+    # Append-only allows your Redis instance to reconstruct its
+    # state based on the event logs persisted on disk.
+    # AWS Elasticache does not support this option, so be aware of that limitation.
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # Web UI to browse through our Redis data and inspect keys during development
+  redis_commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis_ui
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+    ports:
+      - "3001:8081"
+    depends_on:
+      - redis
